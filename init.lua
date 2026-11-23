@@ -60,7 +60,14 @@ vim.pack.add({
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter', version = 'main' },
   'https://github.com/lewis6991/gitsigns.nvim',    -- git signs in the gutter
   'https://github.com/folke/which-key.nvim',       -- popup that shows available keys
+  'https://github.com/folke/tokyonight.nvim',      -- color scheme
+  'https://github.com/coder/claudecode.nvim',      -- Claude Code integration
 })
+
+-- Colors -------------------------------------------------------------------
+-- Styles: tokyonight-night, -storm, -moon, -day. Try them live with `:colorscheme <Tab>`.
+o.termguicolors = true -- full 24-bit color (some SSH setups don't detect it automatically)
+vim.cmd.colorscheme('tokyonight-night')
 
 -- Fuzzy finder -----------------------------------------------------------
 -- Inside telescope: type to filter, <C-n>/<C-p> move, <CR> open, <C-v>/<C-x> split, <Esc> close.
@@ -128,9 +135,23 @@ map('n', '<leader>gg', function()
   vim.cmd.startinsert()
 end, { desc = 'lazygit' })
 
+-- Claude Code --------------------------------------------------------------
+-- Runs the `claude` CLI in a split and lets it see your selection, open files,
+-- and propose edits as diffs. In the diff: <leader>aa accept, <leader>ad reject.
+require('claudecode').setup({ terminal = { provider = 'native' } })
+map('n', '<leader>ac', '<cmd>ClaudeCode<CR>', { desc = 'Toggle Claude' })
+map('n', '<leader>af', '<cmd>ClaudeCodeFocus<CR>', { desc = 'Focus Claude' })
+map('n', '<leader>ar', '<cmd>ClaudeCode --resume<CR>', { desc = 'Resume Claude session' })
+map('n', '<leader>aC', '<cmd>ClaudeCode --continue<CR>', { desc = 'Continue last Claude session' })
+map('n', '<leader>am', '<cmd>ClaudeCodeSelectModel<CR>', { desc = 'Select Claude model' })
+map('n', '<leader>ab', '<cmd>ClaudeCodeAdd %<CR>', { desc = 'Add file to Claude' })
+map('v', '<leader>as', '<cmd>ClaudeCodeSend<CR>', { desc = 'Send selection to Claude' })
+map('n', '<leader>aa', '<cmd>ClaudeCodeDiffAccept<CR>', { desc = 'Accept Claude diff' })
+map('n', '<leader>ad', '<cmd>ClaudeCodeDiffDeny<CR>', { desc = 'Reject Claude diff' })
+
 -- Key hints ----------------------------------------------------------------
 local wk = require('which-key')
-wk.setup({ spec = { { '<leader>g', group = 'git' } } })
+wk.setup({ spec = { { '<leader>g', group = 'git' }, { '<leader>a', group = 'claude' } } })
 map('n', '<leader>?', function() wk.show({ global = false }) end, { desc = 'Keymaps for this buffer' })
 
 ---------------------------------------------------------------------------
