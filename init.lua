@@ -65,9 +65,12 @@ vim.pack.add({
 })
 
 -- Colors -------------------------------------------------------------------
--- Styles: tokyonight-night, -storm, -moon, -day. Try them live with `:colorscheme <Tab>`.
+-- Styles: night, storm, moon, day. Try them live with `:colorscheme <Tab>`.
+-- Plain `tokyonight` follows 'background', which Neovim sets from your terminal's
+-- background color (and updates live when the terminal switches light/dark).
 o.termguicolors = true -- full 24-bit color (some SSH setups don't detect it automatically)
-vim.cmd.colorscheme('tokyonight-night')
+require('tokyonight').setup({ style = 'night', light_style = 'day' })
+vim.cmd.colorscheme('tokyonight')
 
 -- Fuzzy finder -----------------------------------------------------------
 -- Inside telescope: type to filter, <C-n>/<C-p> move, <CR> open, <C-v>/<C-x> split, <Esc> close.
