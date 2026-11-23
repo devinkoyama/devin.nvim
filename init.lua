@@ -91,7 +91,7 @@ map('n', '<leader>.', tb.resume, { desc = 'Reopen last search' })
 -- Tree-sitter: better highlighting + indentation --------------------------
 require('nvim-treesitter').install({
   'typescript', 'tsx', 'javascript', 'json', 'lua', 'markdown',
-  'markdown_inline', 'bash', 'yaml', 'css', 'html',
+  'markdown_inline', 'bash', 'yaml', 'css', 'html', 'python', 'toml',
 })
 vim.api.nvim_create_autocmd('FileType', {
   callback = function(ev)
@@ -157,7 +157,7 @@ map('n', '<leader>?', function() wk.show({ global = false }) end, { desc = 'Keym
 ---------------------------------------------------------------------------
 -- LSP: language servers defined in ./lsp/*.lua
 ---------------------------------------------------------------------------
-vim.lsp.enable({ 'typescript', 'oxlint', 'oxfmt' })
+vim.lsp.enable({ 'typescript', 'oxlint', 'oxfmt', 'basedpyright', 'ruff' })
 
 vim.diagnostic.config({ virtual_text = true }) -- show errors inline
 
@@ -171,20 +171,19 @@ vim.api.nvim_create_autocmd('LspAttach', {
       vim.lsp.completion.enable(true, client.id, buf, { autotrigger = true })
     end
 
-    -- Format on save with oxfmt only (so the TypeScript server never fights it).
-    if client.name == 'oxfmt' then
-      vim.api.nvim_create_autocmd('BufWritePre', {
-        buffer = buf,
-        callback = function()
-          vim.lsp.buf.format({ bufnr = buf, name = 'oxfmt', timeout_ms = 2000 })
-        end,
-      })
+    -- Format on save with one formatter per language (so servers never fight):
+    -- oxfmt for JS/TS/etc., ruff for Python.
+    local formatters = { oxfmt = true, ruff = true }
+    if formatters[client.name] then
+      local fmt = function()
+        vim.lsp.buf.format({ bufnr = buf, name = client.name, timeout_ms = 2000 })
+      end
+      vim.api.nvim_create_autocmd('BufWritePre', { buffer = buf, callback = fmt })
+      map('n', '<leader>F', fmt, { buffer = buf, desc = 'Format file' })
     end
 
     map('n', 'gd', tb.lsp_definitions, { buffer = buf, desc = 'Go to definition' })
     map('n', 'grr', tb.lsp_references, { buffer = buf, desc = 'References' })
-    map('n', '<leader>F', function() vim.lsp.buf.format({ name = 'oxfmt' }) end,
-      { buffer = buf, desc = 'Format file' })
   end,
 })
 -- Built-in LSP keys you also get: K hover, grr references, grn rename,
