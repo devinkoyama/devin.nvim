@@ -1,6 +1,6 @@
 # devin.nvim
 
-Minimal Neovim (0.12+) config for TypeScript/JavaScript and Python, built to be used over SSH.
+Minimal Neovim (0.12+) config for TypeScript/JavaScript, Python and Swift, built to be used over SSH.
 Uses only built-in features where possible: `vim.pack` for plugins, the built-in LSP client and built-in completion.
 
 ## Install
@@ -18,7 +18,7 @@ Open `nvim` and accept the plugin install prompt.
 ## Layout
 
 - `init.lua`: settings, plugins and keymaps
-- `lsp/*.lua`: one file per language server (`typescript` = `tsc --lsp`, `oxlint`, `oxfmt`, `basedpyright`, `ruff`)
+- `lsp/*.lua`: one file per language server (`typescript` = `tsc --lsp`, `oxlint`, `oxfmt`, `basedpyright`, `ruff`, `sourcekit` = `sourcekit-lsp` from Xcode)
 - `nvim-pack-lock.json`: pinned plugin versions (update with `:lua vim.pack.update()`)
 
 ## Keys (leader = Space; press Space and wait to see them all)
@@ -26,13 +26,17 @@ Open `nvim` and accept the plugin install prompt.
 | Key | Action |
 |---|---|
 | `<Space>f` / `<Space>/` | Find files / search text |
-| `<Space>b` `<Space>r` `<Space>h` | Buffers / recent files / help |
+| `<Space>bb` `<Space>r` `<Space>h` | Buffers / recent files / help |
 | `<Space>s` `<Space>x` `<Space>k` | Symbols / diagnostics / keymaps |
-| `<Space>.` | Reopen last search |
-| `-` or `<Space>e` | File explorer (oil) |
+| `<Space>.` `<Space>p` `<Space>n` | Reopen last search / all pickers / notification history |
+| `<Space>e` / `-` | File explorer / reveal current file in it |
+| `<S-h>` `<S-l>` | Previous/next buffer tab |
+| `<Space>bp` `<Space>bP` `<Space>bd` | Pin tab / close unpinned tabs / close buffer |
+| `]]` `[[` | Next/previous use of word under cursor |
+| `<C-/>` | Toggle terminal |
 | `gd` `grr` `grn` `gra` `K` | Definition, references, rename, code action, hover |
 | `[d` `]d` `<Space>d` | Previous/next diagnostic, show diagnostic |
 | `<Space>F` | Format (also runs on save, via oxfmt / ruff) |
 | `]h` `[h` | Next/previous git hunk |
 | `<Space>gs` `gr` `gp` `gb` | Stage / reset / preview hunk, blame line |
-| `<Space>gg` | lazygit |
+| `<Space>gg` `<Space>gl` | lazygit / lazygit history of this file |

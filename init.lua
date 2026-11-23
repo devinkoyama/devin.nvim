@@ -45,23 +45,19 @@ vim.api.nvim_create_autocmd('PackChanged', {
     local name, kind = ev.data.spec.name, ev.data.kind
     if name == 'nvim-treesitter' and kind == 'update' then
       vim.schedule(function() vim.cmd('TSUpdate') end)
-    elseif name == 'telescope-fzf-native.nvim' and (kind == 'install' or kind == 'update') then
-      vim.system({ 'make' }, { cwd = ev.data.path }) -- compiles the fast fuzzy sorter
     end
   end,
 })
 
 vim.pack.add({
-  'https://github.com/nvim-lua/plenary.nvim',      -- helper library telescope needs
-  'https://github.com/nvim-telescope/telescope.nvim', -- fuzzy finder
-  'https://github.com/nvim-telescope/telescope-fzf-native.nvim', -- faster sorting for telescope
-  'https://github.com/nvim-telescope/telescope-ui-select.nvim',  -- code actions etc. in telescope
-  'https://github.com/stevearc/oil.nvim',          -- file explorer: edit folders like text
+  'https://github.com/folke/snacks.nvim',          -- picker, explorer, lazygit, terminal and small extras
   { src = 'https://github.com/nvim-treesitter/nvim-treesitter', version = 'main' },
   'https://github.com/lewis6991/gitsigns.nvim',    -- git signs in the gutter
   'https://github.com/folke/which-key.nvim',       -- popup that shows available keys
   'https://github.com/folke/tokyonight.nvim',      -- color scheme
   'https://github.com/coder/claudecode.nvim',      -- Claude Code integration
+  'https://github.com/nvim-tree/nvim-web-devicons', -- file icons (needs a Nerd Font)
+  'https://github.com/akinsho/bufferline.nvim',    -- open buffers as tabs along the top
 })
 
 -- Colors -------------------------------------------------------------------
@@ -72,29 +68,54 @@ o.termguicolors = true -- full 24-bit color (some SSH setups don't detect it aut
 require('tokyonight').setup({ style = 'night', light_style = 'day' })
 vim.cmd.colorscheme('tokyonight')
 
--- Fuzzy finder -----------------------------------------------------------
--- Inside telescope: type to filter, <C-n>/<C-p> move, <CR> open, <C-v>/<C-x> split, <Esc> close.
-require('telescope').setup({
-  extensions = { ['ui-select'] = { require('telescope.themes').get_dropdown() } },
+-- Snacks -------------------------------------------------------------------
+-- A bundle of small modules; each one is off unless enabled here.
+-- `:checkhealth snacks` shows what's on.
+require('snacks').setup({
+  picker = {                -- fuzzy finder (also used for code actions etc. via vim.ui.select)
+    enabled = true,
+    sources = { explorer = { hidden = true } }, -- show dotfiles in the explorer
+  },
+  explorer = { enabled = true }, -- file tree; also opens when you `nvim <folder>`
+  lazygit = { enabled = true },
+  terminal = { enabled = true },
+  bufdelete = { enabled = true },
+  indent = { enabled = true },    -- indent guides, current scope highlighted
+  words = { enabled = true },     -- highlight other uses of the word under the cursor
+  notifier = { enabled = true },  -- nicer messages, with history
+  bigfile = { enabled = true },   -- turn off heavy features on huge files
+  quickfile = { enabled = true }, -- show `nvim file` before plugins finish loading
 })
-pcall(require('telescope').load_extension, 'fzf') -- pcall: don't error if not built yet
-require('telescope').load_extension('ui-select')
-local tb = require('telescope.builtin')
 local map = vim.keymap.set
-map('n', '<leader>f', tb.find_files, { desc = 'Find files' })
-map('n', '<leader>/', tb.live_grep, { desc = 'Search text in project' })
-map('n', '<leader>b', tb.buffers, { desc = 'Open buffers' })
-map('n', '<leader>h', tb.help_tags, { desc = 'Search help' })
-map('n', '<leader>r', tb.oldfiles, { desc = 'Recent files' })
-map('n', '<leader>s', tb.lsp_document_symbols, { desc = 'Symbols in file' })
-map('n', '<leader>x', tb.diagnostics, { desc = 'All diagnostics' })
-map('n', '<leader>k', tb.keymaps, { desc = 'Search keymaps' })
-map('n', '<leader>.', tb.resume, { desc = 'Reopen last search' })
+
+-- Fuzzy finder -----------------------------------------------------------
+-- Inside the picker: type to filter, <C-n>/<C-p> move, <CR> open, <C-v>/<C-s> split,
+-- <Tab> select several, <Esc> close, ? (in normal mode) for all keys.
+local pick = Snacks.picker
+map('n', '<leader>f', function() pick.files() end, { desc = 'Find files' })
+map('n', '<leader>/', function() pick.grep() end, { desc = 'Search text in project' })
+map('n', '<leader>bb', function() pick.buffers() end, { desc = 'Search open buffers' })
+map('n', '<leader>h', function() pick.help() end, { desc = 'Search help' })
+map('n', '<leader>r', function() pick.recent() end, { desc = 'Recent files' })
+map('n', '<leader>s', function() pick.lsp_symbols() end, { desc = 'Symbols in file' })
+map('n', '<leader>x', function() pick.diagnostics() end, { desc = 'All diagnostics' })
+map('n', '<leader>k', function() pick.keymaps() end, { desc = 'Search keymaps' })
+map('n', '<leader>.', function() pick.resume() end, { desc = 'Reopen last search' })
+map('n', '<leader>n', function() pick.notifications() end, { desc = 'Notification history' })
+map('n', '<leader>p', function() pick() end, { desc = 'All pickers' })
+
+-- Jump between highlighted uses of the word under the cursor (snacks words)
+map('n', ']]', function() Snacks.words.jump(vim.v.count1) end, { desc = 'Next reference' })
+map('n', '[[', function() Snacks.words.jump(-vim.v.count1) end, { desc = 'Previous reference' })
+
+-- Terminal: toggle a terminal split. <C-/> works in normal and terminal mode.
+map({ 'n', 't' }, '<C-/>', function() Snacks.terminal() end, { desc = 'Toggle terminal' })
+map({ 'n', 't' }, '<C-_>', function() Snacks.terminal() end, { desc = 'Toggle terminal' }) -- what some terminals send for <C-/>
 
 -- Tree-sitter: better highlighting + indentation --------------------------
 require('nvim-treesitter').install({
   'typescript', 'tsx', 'javascript', 'json', 'lua', 'markdown',
-  'markdown_inline', 'bash', 'yaml', 'css', 'html', 'python', 'toml',
+  'markdown_inline', 'bash', 'yaml', 'css', 'html', 'python', 'toml', 'swift',
 })
 vim.api.nvim_create_autocmd('FileType', {
   callback = function(ev)
@@ -106,12 +127,33 @@ vim.api.nvim_create_autocmd('FileType', {
 })
 
 -- File explorer --------------------------------------------------------------
--- Edit the listing like text: rename a line to rename the file, `dd` to delete,
--- add a line to create (end with / for a folder). `:w` applies the changes.
--- <CR> open, `-` go up, `g?` help.
-require('oil').setup({ view_options = { show_hidden = true } })
-map('n', '-', '<cmd>Oil<CR>', { desc = 'Open parent folder' })
-map('n', '<leader>e', '<cmd>Oil<CR>', { desc = 'File explorer' })
+-- Tree sidebar that follows the current file. Inside it: <CR>/l open, h close folder,
+-- a add (end with / for a folder), r rename, d delete, c copy, m move, H toggle dotfiles,
+-- <BS> go up, ? help.
+map('n', '<leader>e', function() Snacks.explorer() end, { desc = 'File explorer' })
+map('n', '-', function() Snacks.explorer.reveal() end, { desc = 'Show current file in explorer' })
+
+-- Buffer tabs (LazyVim-style keys) --------------------------------------------
+-- Pin the files you care about, then <leader>bP clears out everything else.
+require('bufferline').setup({
+  options = {
+    diagnostics = 'nvim_lsp', -- show LSP error/warning counts on tabs
+    always_show_bufferline = false, -- hide the bar when only one buffer is open
+  },
+})
+map('n', '<S-h>', '<cmd>BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
+map('n', '<S-l>', '<cmd>BufferLineCycleNext<CR>', { desc = 'Next buffer' })
+map('n', '[b', '<cmd>BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
+map('n', ']b', '<cmd>BufferLineCycleNext<CR>', { desc = 'Next buffer' })
+map('n', '[B', '<cmd>BufferLineMovePrev<CR>', { desc = 'Move buffer left' })
+map('n', ']B', '<cmd>BufferLineMoveNext<CR>', { desc = 'Move buffer right' })
+map('n', '<leader>bp', '<cmd>BufferLineTogglePin<CR>', { desc = 'Toggle pin' })
+map('n', '<leader>bP', '<cmd>BufferLineGroupClose ungrouped<CR>', { desc = 'Close non-pinned buffers' })
+map('n', '<leader>bo', '<cmd>BufferLineCloseOthers<CR>', { desc = 'Close other buffers' })
+map('n', '<leader>bl', '<cmd>BufferLineCloseLeft<CR>', { desc = 'Close buffers to the left' })
+map('n', '<leader>br', '<cmd>BufferLineCloseRight<CR>', { desc = 'Close buffers to the right' })
+map('n', '<leader>bj', '<cmd>BufferLinePick<CR>', { desc = 'Pick buffer' })
+map('n', '<leader>bd', function() Snacks.bufdelete() end, { desc = 'Close buffer (keep window)' })
 
 -- Git ----------------------------------------------------------------------
 local gs = require('gitsigns')
@@ -123,20 +165,9 @@ map('n', '<leader>gr', gs.reset_hunk, { desc = 'Reset hunk' })
 map('n', '<leader>gp', gs.preview_hunk, { desc = 'Preview hunk' })
 map('n', '<leader>gb', gs.blame_line, { desc = 'Blame line' })
 
--- lazygit in a floating terminal (no plugin needed)
-map('n', '<leader>gg', function()
-  local buf = vim.api.nvim_create_buf(false, true)
-  local width, height = math.floor(vim.o.columns * 0.9), math.floor(vim.o.lines * 0.9)
-  vim.api.nvim_open_win(buf, true, {
-    relative = 'editor', border = 'rounded', width = width, height = height,
-    row = math.floor((vim.o.lines - height) / 2), col = math.floor((vim.o.columns - width) / 2),
-  })
-  vim.fn.jobstart('lazygit', {
-    term = true,
-    on_exit = function() vim.api.nvim_buf_delete(buf, { force = true }) end,
-  })
-  vim.cmd.startinsert()
-end, { desc = 'lazygit' })
+-- lazygit in a floating window (snacks); colors match the current theme
+map('n', '<leader>gg', function() Snacks.lazygit() end, { desc = 'lazygit' })
+map('n', '<leader>gl', function() Snacks.lazygit.log_file() end, { desc = 'lazygit: history of this file' })
 
 -- Claude Code --------------------------------------------------------------
 -- Runs the `claude` CLI in a split and lets it see your selection, open files,
@@ -154,13 +185,13 @@ map('n', '<leader>ad', '<cmd>ClaudeCodeDiffDeny<CR>', { desc = 'Reject Claude di
 
 -- Key hints ----------------------------------------------------------------
 local wk = require('which-key')
-wk.setup({ spec = { { '<leader>g', group = 'git' }, { '<leader>a', group = 'claude' } } })
+wk.setup({ spec = { { '<leader>g', group = 'git' }, { '<leader>b', group = 'buffers' },{ '<leader>a', group = 'claude' } } })
 map('n', '<leader>?', function() wk.show({ global = false }) end, { desc = 'Keymaps for this buffer' })
 
 ---------------------------------------------------------------------------
 -- LSP: language servers defined in ./lsp/*.lua
 ---------------------------------------------------------------------------
-vim.lsp.enable({ 'typescript', 'oxlint', 'oxfmt', 'basedpyright', 'ruff' })
+vim.lsp.enable({ 'typescript', 'oxlint', 'oxfmt', 'basedpyright', 'ruff', 'sourcekit' })
 
 vim.diagnostic.config({ virtual_text = true }) -- show errors inline
 
@@ -185,8 +216,8 @@ vim.api.nvim_create_autocmd('LspAttach', {
       map('n', '<leader>F', fmt, { buffer = buf, desc = 'Format file' })
     end
 
-    map('n', 'gd', tb.lsp_definitions, { buffer = buf, desc = 'Go to definition' })
-    map('n', 'grr', tb.lsp_references, { buffer = buf, desc = 'References' })
+    map('n', 'gd', function() Snacks.picker.lsp_definitions() end, { buffer = buf, desc = 'Go to definition' })
+    map('n', 'grr', function() Snacks.picker.lsp_references() end, { buffer = buf, desc = 'References' })
   end,
 })
 -- Built-in LSP keys you also get: K hover, grr references, grn rename,
