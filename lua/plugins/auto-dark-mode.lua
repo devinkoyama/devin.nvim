@@ -1,5 +1,5 @@
 -- Follow the macOS light/dark appearance setting.
--- tokyonight picks its "night" or "day" style based on `vim.o.background`.
+-- rose-pine picks its dark or dawn variant based on `vim.o.background`.
 return {
   {
     "f-person/auto-dark-mode.nvim",

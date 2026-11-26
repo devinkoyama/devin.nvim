@@ -15,3 +15,8 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.conceallevel = 0
   end,
 })
+
+-- Mode-coloured cursor in Rex
+if vim.env.TERM_PROGRAM == "rex" then
+  require("config.rex_cursor")
+end
